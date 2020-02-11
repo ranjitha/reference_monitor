@@ -1,0 +1,96 @@
+"""
+This security layer inadequately handles A/B storage for files in RepyV2.
+
+
+
+Note:
+    This security layer uses encasementlib.r2py, restrictions.default, repy.py and Python
+    Also you need to give it an application to run.
+    python repy.py restrictions.default encasementlib.r2py [security_layer].r2py [attack_program].r2py 
+    
+    """ 
+TYPE="type"
+ARGS="args"
+RETURN="return"
+EXCP="exceptions"
+TARGET="target"
+FUNC="func"
+OBJC="objc"
+
+
+def remove(filename):
+  if filename in listfiles():
+    removefile(filename)
+
+
+def recreate(filename):
+  remove(filename)
+  return openfile(filename, True)
+
+
+class ABFile():
+  def __init__(self, filename, create):
+    # globals
+    mycontext['debug'] = False
+    self.lock = createlock()
+
+    self.afn = filename+".a"
+    self.bfn = filename+".b"
+
+    self.a_file = openfile(self.afn, create)
+    self.b_file = recreate(self.bfn)
+
+    if self.a_file.readat(None, 0) == "":
+      self.a_file.writeat("SE", 0)
+
+    file_content = self.a_file.readat(None, 0)
+    self.b_file.writeat(file_content, 0)
+
+
+  def writeat(self, data, offset):
+    # Write the requested data to the B file using the sandbox's writeat call
+    # from the RWlock, use non-exclusive Racquire()
+    self.lock.acquire(True)
+    try:
+      self.b_file.writeat(data,offset)
+    finally:
+      # from the RWlock, use non-exclusive Rrelease()
+      self.lock.release()
+  
+
+  def readat(self, bytes, offset):
+    # Read from the A file using the sandbox's readat...
+    return self.a_file.readat(bytes,offset)
+
+
+  def close(self):
+    # from the RWlock, use exclusive Wacquire()
+    self.lock.acquire(True)
+    try:
+      b_content = self.b_file.readat(None, 0)
+      if len(b_content) >= 2 and b_content[0] == "S" and b_content[-1] == "E":
+        self.a_file.writeat(b_content, 0)
+      self.b_file.close()
+      remove(self.bfn)
+      self.a_file.close()
+    finally:
+      # from the RWlock, use exclusive Wrelease()
+      self.lock.release()
+
+def ABopenfile(filename, create):
+  return ABFile(filename,create)
+
+
+# The code here sets up type checking and variable hiding for you.  You
+# should not need to change anything below here.
+sec_file_def = {"obj-type":ABFile,
+                "name":"ABFile",
+                "writeat":{"type":"func","args":(str,(int,long)),"exceptions":Exception,"return":(int,type(None)),"target":ABFile.writeat},
+                "readat":{"type":"func","args":((int,long,type(None)),(int,long)),"exceptions":Exception,"return":str,"target":ABFile.readat},
+                "close":{"type":"func","args":None,"exceptions":None,"return":(bool,type(None)),"target":ABFile.close}
+           }
+CHILD_CONTEXT_DEF["ABopenfile"] = {TYPE:OBJC,ARGS:(str,bool),EXCP:Exception,RETURN:sec_file_def,TARGET:ABopenfile}
+CHILD_CONTEXT_DEF["openfile"] = {TYPE:OBJC,ARGS:(str,bool),EXCP:Exception,RETURN:sec_file_def,TARGET:ABopenfile}
+
+# Execute the user code
+secure_dispatch_module()
