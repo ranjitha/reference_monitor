@@ -1,0 +1,10 @@
+file = ABopenfile("exampletestfile.txt", True)
+data = "S123E"
+file.writeat(data, 0)
+try:
+	ABopenfile("exampletestfile.txt", True)
+except:
+	pass
+else:
+	raise Exception("exampletestfile.txt created and opened again while it was still open. Should have failed with an error.\n")
+file.close()

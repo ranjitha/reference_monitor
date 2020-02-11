@@ -1,0 +1,29 @@
+def remove(f):
+  if f in listfiles(): removefile(f)
+
+remove("testfile.txt")
+remove("testfile.txt.a")
+remove("testfile.txt.b")
+
+file = ABopenfile("testfile.txt", True)
+
+empty_data = "SE"
+new_data = "S 12345 E"
+
+def assert_content(expected):
+  actual = file.readat(None, 0)
+  assert expected == actual, "expected '%s', found '%s'" % (expected, actual)
+
+assert_content(empty_data)
+
+file.writeat(new_data, 0)
+file.close()
+
+removefile("testfile.txt.a")
+
+file = ABopenfile("testfile.txt", True)
+assert_content(empty_data)
+
+file.close()
+file = ABopenfile("testfile.txt", True)
+assert_content(empty_data)

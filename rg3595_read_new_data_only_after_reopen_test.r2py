@@ -1,0 +1,22 @@
+def remove(file):
+  if file in listfiles():
+  	removefile(file)
+
+remove("testfile.txt")
+remove("testfile.txt.a")
+remove("testfile.txt.b")
+
+file = ABopenfile("testfile.txt", True)
+
+empty_data = "SE"
+new_data = "S 12345 E"
+
+def assert_content(content):
+  assert(content == file.readat(None, 0))
+
+assert_content(empty_data)
+file.writeat(new_data, 0)
+assert_content(empty_data)
+file.close()
+file = ABopenfile("testfile.txt", False)
+assert_content(new_data)

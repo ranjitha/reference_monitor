@@ -1,0 +1,6 @@
+try:
+  ABopenfile("abCde.txt", True)
+except:
+  pass
+else:
+  raise Exception("abCde.txt created. Should have failed with error.\n")
